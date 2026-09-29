@@ -31,8 +31,8 @@ h1{font-family:var(--serif);font-size:34px;line-height:1;margin:0;color:var(--ac
 .pill{height:44px;padding:0 16px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:600}
 .btn{height:44px;padding:0 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;font-weight:600}
 .btn.ghost{background:#fff;color:var(--ink);border:1px solid #DCCBC4}
-.tag-demo{padding:8px 14px;border-radius:999px;background:#FFF0C9;color:var(--warn);font-size:13px;font-weight:600}
 .viewtabs{display:flex;gap:8px;margin-bottom:20px}
+.login-wrap{max-width:380px;margin:80px auto}
 .viewtab{height:42px;padding:0 20px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:700;font-size:15px}
 .viewtab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:32px;align-items:start}
@@ -103,18 +103,18 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" id="app" style="display:none">
   <header>
     <div>
       <h1>Reina Dabi</h1>
       <div class="sub">Tablero de pedidos de rosas</div>
     </div>
     <div class="bar">
-      <span class="tag-demo" id="demoTag" hidden>Datos de ejemplo</span>
       <label for="mes" style="margin:0;position:absolute;left:-9999px">Mes de entrega</label>
       <select id="mes" class="pill"></select>
       <button class="btn ghost" id="csv" type="button">Descargar CSV</button>
       <button class="btn ghost" id="clear" type="button">Borrar todo</button>
+      <button class="btn ghost" id="logout" type="button">Salir</button>
     </div>
   </header>
 
@@ -208,14 +208,44 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     <details class="card">
       <summary>Lista de precios y costo</summary>
       <div class="prices" id="prices"></div>
-      <div class="note">Cambiá estos valores por tu presupuesto real. Los precios que ves ahora son de ejemplo. Cuantas más rosas se piden, más barata sale cada una — para eso el precio de cada tramo (3, 5, 7, 14, 21) debería ser menor por rosa que el anterior. Para cantidades que no están en la lista, el precio es cantidad × "Resto, por rosa".</div>
+      <div class="note">Cuantas más rosas se piden, más barata sale cada una — para eso el precio de cada tramo (3, 5, 7, 14, 21) debería ser menor por rosa que el anterior. Para cantidades que no están en la lista, el precio es cantidad × "Resto, por rosa".</div>
     </details>
   </div>
 </div>
 
+<div class="wrap" id="loginGate" style="display:none">
+  <form class="card pad login-wrap" id="loginForm" autocomplete="off">
+    <h2 style="font-family:var(--serif);font-size:24px;margin:0 0 4px">Reina Dabi</h2>
+    <div class="sub" style="margin-bottom:18px">Ingresá para ver el tablero</div>
+    <div class="fg" style="margin-top:0"><label for="loginEmail">Email</label><input type="text" id="loginEmail" autocomplete="username"></div>
+    <div class="fg"><label for="loginPass">Contraseña</label><input type="password" id="loginPass" autocomplete="current-password"></div>
+    <div class="err" id="loginErr" role="alert"></div>
+    <button class="btn save" type="submit">Ingresar</button>
+  </form>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
 (function(){
-  var KEY='reinaDabi.tablero.v1';
+  var firebaseConfig={
+    apiKey:"AIzaSyBjvUjaYzHTpfer4GItAvrm8FYUFSEzQJQ",
+    authDomain:"rosas-eternas-af9ab.firebaseapp.com",
+    databaseURL:"https://rosas-eternas-af9ab-default-rtdb.firebaseio.com",
+    projectId:"rosas-eternas-af9ab",
+    storageBucket:"rosas-eternas-af9ab.firebasestorage.app",
+    messagingSenderId:"269199668290",
+    appId:"1:269199668290:web:724fa44412c7ca721029db"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var auth=firebase.auth();
+  var db=firebase.database();
+  var ordersRef=db.ref('pedidos/orders');
+  var configRef=db.ref('pedidos/config');
+  var DEFAULT_PRICES={1:3000,3:8000,5:12000,7:16000,14:28000,21:39000};
+  var DEFAULT_PERROSE=1850, DEFAULT_COSTROSE=800;
+
   var COLORS={
     rojo:['Rojo','#B3122F'], rosa:['Rosa','#E89BB3'], blanco:['Blanco','#F6F1EC'], amarillo:['Amarillo','#E9B949'],
     azul:['Azul','#3E6FB0'], violeta:['Violeta','#7B4BA0'], negro:['Negro','#1F1B1D'], verde:['Verde','#5E8F6B'],
@@ -234,32 +264,12 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   function today(){var d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
   function addDays(n){var d=today();d.setDate(d.getDate()+n);return iso(d)}
 
-  var S; // estado guardado
-  function seed(){
-    var t=today(), y=t.getFullYear();
-    var maria=new Date(y,9,15); if(maria<t) maria=new Date(y+1,9,15);
-    var sample=[
-      ['Lucía P.','Tigre',false,3,'rojo',4000,2400,'En preparación',addDays(1),''],
-      ['Camila R.','Nordelta',true,14,'blanco',14000,11200,'Reservado',addDays(3),'Entregar en portería, avisar por WhatsApp antes'],
-      ['Julieta S.','San Fernando',true,5,'rosa',6000,4000,'Reservado',addDays(9),''],
-      ['María','Tigre',false,7,'verde',8000,5600,'Reservado',iso(maria),'Cumpleaños — pidió tarjeta con dedicatoria'],
-      ['Sofía M.','Benavídez',true,21,'rojo',19500,16800,'Reservado',addDays(17),'']
-    ];
-    var orders=sample.map(function(r,i){return {id:'s'+i,creado:iso(t),entrega:r[8],nombre:r[0],tel:'',lugar:r[1],envio:r[2],qty:r[3],color:r[4],precio:null,pagado:r[5],costo:r[6],estado:r[7],observaciones:r[9]||''}});
-    var prices={1:3000,3:8000,5:12000,7:16000,14:28000,21:39000};
-    orders.forEach(function(o){o.precio=priceFor(o.qty,prices,1850)});
-    return {orders:orders,prices:prices,perRose:1850,costRose:800,demo:true};
-  }
+  var S={orders:[],prices:{},perRose:DEFAULT_PERROSE,costRose:DEFAULT_COSTROSE};
   function priceFor(q,prices,perRose){
     prices=prices||S.prices; perRose=perRose==null?S.perRose:perRose;
     if(prices[q]!=null && prices[q]!=='') return +prices[q];
     return Math.round(q*perRose/500)*500;
   }
-  function load(){
-    try{var raw=localStorage.getItem(KEY); if(raw){S=JSON.parse(raw); return}}catch(e){}
-    S=seed();
-  }
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
   // Formulario
   var F={qty:9,color:'verde',envio:false,precioManual:false,reservaManual:false};
@@ -298,12 +308,11 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
       if(!ent){$('err').textContent='Falta la fecha de entrega.';return}
       if(!nombre){$('err').textContent='Falta el nombre.';return}
       $('err').textContent='';
-      if(S.demo){S.orders=[];S.demo=false}
-      S.orders.push({id:'o'+Date.now(),creado:iso(today()),entrega:ent,nombre:nombre,tel:$('tel').value.trim(),lugar:$('lugar').value.trim(),
+      ordersRef.push({creado:iso(today()),entrega:ent,nombre:nombre,tel:$('tel').value.trim(),lugar:$('lugar').value.trim(),
         envio:F.envio,qty:F.qty,color:F.color,precio:+$('precio').value||0,pagado:+$('reserva').value||0,costo:F.qty*S.costRose,estado:'Reservado',
         observaciones:$('obs').value.trim()});
-      save(); $('nombre').value='';$('tel').value='';$('lugar').value='';$('entrega').value='';$('obs').value='';
-      F.precioManual=false;F.reservaManual=false; refreshForm(); render();
+      $('nombre').value='';$('tel').value='';$('lugar').value='';$('entrega').value='';$('obs').value='';
+      F.precioManual=false;F.reservaManual=false; refreshForm();
     };
     refreshForm();
   }
@@ -317,10 +326,10 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     $('prices').innerHTML=h;
     $('prices').oninput=function(e){
       var el=e.target;
-      if(el.dataset.t){S.prices[el.dataset.t]=el.value===''?null:+el.value}
-      else if(el.id==='pr'){S.perRose=+el.value||0}
-      else if(el.id==='pc'){S.costRose=+el.value||0}
-      save(); F.precioManual=false;F.reservaManual=false; refreshForm();
+      if(el.dataset.t){configRef.child('prices/'+el.dataset.t).set(el.value===''?null:+el.value)}
+      else if(el.id==='pr'){configRef.update({perRose:+el.value||0})}
+      else if(el.id==='pc'){configRef.update({costRose:+el.value||0})}
+      F.precioManual=false;F.reservaManual=false;
     };
   }
 
@@ -339,7 +348,6 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   var tab='activos', mes='todos';
   function debe(o){return Math.max(o.precio-o.pagado,0)}
   function render(){
-    $('demoTag').hidden=!S.demo;
     // meses
     var ms={}; S.orders.forEach(function(o){ms[o.entrega.slice(0,7)]=1});
     var keys=Object.keys(ms).sort();
@@ -395,20 +403,20 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   // Eventos de la tabla
   $('rows').addEventListener('click',function(e){
     var b=e.target.closest('[data-act]'); if(!b) return;
-    var row=b.closest('.row'), id=row.dataset.id, i=S.orders.findIndex(function(o){return o.id===id}); if(i<0) return;
-    if(b.dataset.act==='pay'){S.orders[i].pagado=S.orders[i].precio;save();render()}
-    if(b.dataset.act==='del'){ if(confirm('¿Borrar el pedido de '+S.orders[i].nombre+'?')){S.orders.splice(i,1);S.demo=false;save();render()} }
+    var row=b.closest('.row'), id=row.dataset.id, o=S.orders.find(function(x){return x.id===id}); if(!o) return;
+    if(b.dataset.act==='pay'){ordersRef.child(id).update({pagado:o.precio})}
+    if(b.dataset.act==='del'){ if(confirm('¿Borrar el pedido de '+o.nombre+'?')){ordersRef.child(id).remove()} }
   });
   $('rows').addEventListener('change',function(e){
     var s=e.target.closest('[data-act="estado"]'); if(!s) return;
-    var id=s.closest('.row').dataset.id, o=S.orders.find(function(x){return x.id===id});
-    if(o){o.estado=s.value;save();render()}
+    var id=s.closest('.row').dataset.id;
+    ordersRef.child(id).update({estado:s.value});
   });
   Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(b){
     b.onclick=function(){tab=b.dataset.tab;Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(x){x.setAttribute('aria-pressed',String(x===b))});render()};
   });
   $('mes').onchange=function(){mes=$('mes').value;render()};
-  $('clear').onclick=function(){ if(confirm('¿Borrar todos los pedidos? No se puede deshacer.')){S.orders=[];S.demo=false;save();render()} };
+  $('clear').onclick=function(){ if(confirm('¿Borrar todos los pedidos? No se puede deshacer.')){ordersRef.remove()} };
   $('csv').onclick=function(){
     var head=['Fecha pedido','Fecha entrega','Nombre','Teléfono','De dónde es','Entrega / Retira','Cantidad rosas','Color','Seña ($)','Precio final ($)','Falta cobrar ($)','Estado','Observaciones'];
     var lines=[head].concat(S.orders.slice().sort(function(a,b){return a.entrega<b.entrega?-1:1}).map(function(o){
@@ -418,7 +426,43 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='pedidos-reina-dabi.csv'; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href)},1000);
   };
 
-  load(); buildForm(); buildPrices(); render();
+  buildForm();
+
+  // Login / datos en vivo desde Firebase
+  var loaded={config:false,orders:false};
+  function tryRender(){ if(loaded.config&&loaded.orders) render(); }
+  function onConfigSnap(snap){
+    if(!snap.exists()){ configRef.set({prices:DEFAULT_PRICES,perRose:DEFAULT_PERROSE,costRose:DEFAULT_COSTROSE}); return; }
+    var c=snap.val();
+    S.prices=c.prices||{}; S.perRose=c.perRose!=null?c.perRose:DEFAULT_PERROSE; S.costRose=c.costRose!=null?c.costRose:DEFAULT_COSTROSE;
+    loaded.config=true; buildPrices(); refreshForm(); tryRender();
+  }
+  function onOrdersSnap(snap){
+    var v=snap.val()||{};
+    S.orders=Object.keys(v).map(function(id){var o=v[id]; o.id=id; return o});
+    loaded.orders=true; tryRender();
+  }
+  function attachListeners(){ configRef.on('value',onConfigSnap); ordersRef.on('value',onOrdersSnap); }
+  function detachListeners(){ configRef.off('value',onConfigSnap); ordersRef.off('value',onOrdersSnap); loaded.config=false; loaded.orders=false; }
+
+  auth.onAuthStateChanged(function(user){
+    if(user){
+      $('app').style.display=''; $('loginGate').style.display='none'; $('loginErr').textContent='';
+      attachListeners();
+    }else{
+      detachListeners();
+      $('app').style.display='none'; $('loginGate').style.display='';
+    }
+  });
+  $('loginForm').onsubmit=function(e){
+    e.preventDefault();
+    var email=$('loginEmail').value.trim(), pass=$('loginPass').value;
+    $('loginErr').textContent='';
+    auth.signInWithEmailAndPassword(email,pass).catch(function(){
+      $('loginErr').textContent='No se pudo ingresar: revisá el email y la contraseña.';
+    });
+  };
+  $('logout').onclick=function(){ auth.signOut(); };
 
   if('serviceWorker' in navigator){
     window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
