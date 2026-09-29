@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reina Dabi — Tablero de pedidos</title>
+<style>
+:root{
+  --bg:#FBF6F3; --card:#FFFFFF; --line:#EADFDA; --ink:#2A1B20; --muted:#6E5D63;
+  --accent:#7A1F3D; --accent-soft:#F0DDE3; --ok:#0F5A52; --warn:#7A4B00; --bad:#8F2A12;
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+  --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #1F4A7A;outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 24px 48px}
+header{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;margin-bottom:20px}
+h1{font-family:var(--serif);font-size:34px;line-height:1;margin:0;color:var(--accent);font-weight:700}
+.sub{font-size:14px;color:var(--muted);margin-top:4px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pill{height:44px;padding:0 16px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:600}
+.btn{height:44px;padding:0 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;font-weight:600}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid #DCCBC4}
+.tag-demo{padding:8px 14px;border-radius:999px;background:#FFF0C9;color:var(--warn);font-size:13px;font-weight:600}
+.viewtabs{display:flex;gap:8px;margin-bottom:20px}
+.viewtab{height:42px;padding:0 20px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:700;font-size:15px}
+.viewtab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:32px;align-items:start}
+@media (max-width:1000px){.layout{grid-template-columns:1fr}}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.kpi .l{font-size:13px;color:var(--muted)}
+.kpi .v{font-family:var(--serif);font-size:26px;font-weight:700;margin:4px 0 2px}
+.kpi .n{font-size:12px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px}
+.card h2{font-family:var(--serif);font-size:22px;margin:0}
+.head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;padding:18px 20px 12px}
+.tabs{display:flex;gap:6px}
+.tab{height:36px;padding:0 14px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:600;font-size:14px}
+.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+select.mini{height:36px;border:1px solid #DCCBC4;border-radius:10px;padding:0 10px;background:#fff}
+.scroll{overflow-x:auto}
+.row{display:grid;grid-template-columns:120px minmax(150px,1fr) 118px 84px 84px 84px 132px 44px;gap:10px;padding:12px 20px;align-items:center;border-top:1px solid #F0E6E1;min-width:860px}
+.row.th{background:#F7EFEB;font-size:13px;font-weight:600;color:#5F4E54;border-top:none}
+.row.tot{background:var(--bg);border-top:2px solid var(--line);font-weight:600}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.fecha{font-size:17px;font-weight:700}
+.badge{display:inline-block;margin-top:4px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.b-ok{background:#DFF1EE;color:var(--ok)} .b-warn{background:#FFF0C9;color:var(--warn)} .b-bad{background:#FBE3DC;color:var(--bad)} .b-done{background:#ECE7E5;color:#5F4E54}
+.who{font-weight:600} .where{font-size:13px;color:var(--muted)}
+.obs{font-size:12px;color:var(--muted);font-style:italic;margin-top:2px}
+.dot{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.estado{height:34px;border:1px solid #DCCBC4;border-radius:10px;padding:0 6px;background:#fff;font-size:13px;font-weight:600;width:100%}
+.x{width:36px;height:36px;border-radius:10px;border:1px solid #DCCBC4;background:#fff;font-size:18px;line-height:1}
+.pay{margin-top:4px;padding:2px 8px;border:1px solid var(--accent);border-radius:999px;background:#fff;color:var(--accent);font-size:12px;font-weight:600;height:auto}
+.empty{padding:36px 20px;text-align:center;color:var(--muted)}
+.pad{padding:20px}
+.progress{height:16px;border-radius:999px;background:var(--accent-soft);overflow:hidden;margin:14px 0 10px}
+.progress>div{height:100%;background:var(--accent)}
+.line{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid #F0E6E1;font-size:14px}
+.line span:first-child{color:var(--muted)}
+.cbar{display:grid;grid-template-columns:100px 1fr 30px;gap:10px;align-items:center;margin-top:12px;font-size:14px}
+.cbar .t{height:10px;border-radius:999px;background:#F3EAE6}
+.cbar .t>div{height:10px;border-radius:999px;background:var(--accent)}
+form.card{padding:22px;position:sticky;top:16px}
+@media (max-width:1000px){form.card{position:static}}
+label{display:block;font-size:13px;font-weight:600;color:#5F4E54;margin-bottom:6px}
+input[type=text],input[type=number],input[type=date],input[type=tel],select.f{width:100%;height:44px;border:1px solid #D9C9C2;border-radius:10px;padding:0 12px;background:#fff}
+textarea.f{width:100%;min-height:64px;border:1px solid #D9C9C2;border-radius:10px;padding:10px 12px;background:#fff;resize:vertical}
+.f-entrega label{color:var(--accent);font-size:14px}
+.f-entrega input{height:52px;border:2px solid var(--accent);font-size:19px;font-weight:700}
+.fg{margin-top:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qtyrow{display:grid;grid-template-columns:1fr 110px;gap:10px}
+.swatches{display:flex;flex-wrap:wrap;gap:12px}
+.sw{width:44px;height:44px;border-radius:50%;border:none;padding:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--accent)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #D9C9C2;border-radius:10px;overflow:hidden}
+.seg button{height:44px;border:none;background:#fff;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.calc{background:var(--bg);border-radius:12px;padding:14px;margin-top:16px}
+.calc .r{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.calc input{width:130px;text-align:right;height:38px;font-weight:600}
+.calc .debe{border-top:1px solid #E5D8D2;padding-top:10px;margin-bottom:0;font-weight:700;font-size:17px}
+.save{width:100%;height:52px;border-radius:12px;margin-top:16px;font-size:16px}
+.err{color:var(--bad);font-size:13px;margin-top:8px;min-height:18px}
+details.card{margin-top:20px}
+summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px;font-weight:700}
+.prices{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;padding:0 20px 20px}
+.prices input{height:40px}
+.note{padding:0 20px 18px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Reina Dabi</h1>
+      <div class="sub">Tablero de pedidos de rosas</div>
+    </div>
+    <div class="bar">
+      <span class="tag-demo" id="demoTag" hidden>Datos de ejemplo</span>
+      <label for="mes" style="margin:0;position:absolute;left:-9999px">Mes de entrega</label>
+      <select id="mes" class="pill"></select>
+      <button class="btn ghost" id="csv" type="button">Descargar CSV</button>
+      <button class="btn ghost" id="clear" type="button">Borrar todo</button>
+    </div>
+  </header>
+
+  <nav class="viewtabs" role="group" aria-label="Sección">
+    <button class="viewtab" type="button" data-view="pedidos" aria-pressed="true">📋 Pedidos</button>
+    <button class="viewtab" type="button" data-view="balance" aria-pressed="false">💰 Balance</button>
+  </nav>
+
+  <div class="layout" id="view-pedidos">
+    <main>
+      <section class="kpis" id="kpis-pedidos" aria-label="Resumen de pedidos"></section>
+
+      <section class="card">
+        <div class="head">
+          <h2>Próximas entregas</h2>
+          <div class="tabs" role="group" aria-label="Filtro">
+            <button class="tab" type="button" data-tab="activos" aria-pressed="true">Activos</button>
+            <button class="tab" type="button" data-tab="entregados" aria-pressed="false">Entregados</button>
+            <button class="tab" type="button" data-tab="todos" aria-pressed="false">Todos</button>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="row th"><div>Entrega</div><div>Cliente</div><div>Rosas</div><div class="num">Precio</div><div class="num">Reserva</div><div class="num">Debe</div><div>Estado</div><div></div></div>
+          <div id="rows"></div>
+          <div class="row tot" id="tot"></div>
+        </div>
+      </section>
+
+      <section class="card pad" style="margin-top:20px">
+        <h2>Rosas por color</h2>
+        <div id="colors"></div>
+      </section>
+    </main>
+
+    <form class="card" id="form" autocomplete="off">
+      <h2 style="font-family:var(--serif);font-size:24px;margin:0">Nuevo pedido</h2>
+      <div class="sub" id="hoy"></div>
+
+      <div class="fg f-entrega"><label for="entrega">Fecha de entrega</label><input type="date" id="entrega" required></div>
+
+      <div class="fg">
+        <label for="qty">Cantidad de rosas</label>
+        <div class="qtyrow">
+          <select id="qty" class="f"></select>
+          <input type="number" id="otro" min="1" placeholder="Otro nº" aria-label="Otra cantidad de rosas">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label id="lbl-color">Color de rosas: <span id="colorName"></span></label>
+        <div class="swatches" id="swatches" role="group" aria-labelledby="lbl-color"></div>
+      </div>
+
+      <div class="fg"><label for="nombre">Nombre</label><input type="text" id="nombre" required></div>
+      <div class="two fg">
+        <div><label for="tel">Teléfono</label><input type="tel" id="tel" placeholder="11 0000 0000"></div>
+        <div><label for="lugar">De dónde es</label><input type="text" id="lugar"></div>
+      </div>
+      <div class="fg">
+        <div class="seg" role="group" aria-label="Entrega">
+          <button type="button" id="retira" aria-pressed="true">Retira</button>
+          <button type="button" id="envia" aria-pressed="false">Se envía</button>
+        </div>
+      </div>
+
+      <div class="fg"><label for="obs">Observaciones</label><textarea class="f" id="obs" rows="2" placeholder="Detalles del pedido, dedicatoria, pedido especial, etc."></textarea></div>
+
+      <div class="calc">
+        <div class="r"><label for="precio" style="margin:0">Precio (según cantidad)</label><input type="number" id="precio" min="0" step="500"></div>
+        <div class="r"><label for="reserva" style="margin:0">Reserva (se descuenta)</label><input type="number" id="reserva" min="0" step="500"></div>
+        <div class="r debe"><span>Cuánto debe</span><span id="debe" style="color:var(--bad)"></span></div>
+      </div>
+      <div class="err" id="err" role="alert"></div>
+      <button class="btn save" type="submit">Guardar pedido</button>
+    </form>
+  </div>
+
+  <div id="view-balance">
+    <section class="kpis" id="kpis-balance" aria-label="Resumen financiero"></section>
+
+    <section class="card pad">
+      <h2>Balance</h2>
+      <div class="progress"><div id="pbar" style="width:0%"></div></div>
+      <div class="line" style="border-top:none"><span>Cobrado</span><b id="b-paid"></b></div>
+      <div class="line"><span>Falta cobrar</span><b id="b-owed"></b></div>
+      <div class="line"><span>Facturado</span><b id="b-total"></b></div>
+      <div class="line"><span>Costo de materiales</span><b id="b-cost"></b></div>
+      <div class="line"><span>Ganancia estimada</span><b id="b-profit" style="color:var(--ok)"></b></div>
+    </section>
+
+    <details class="card">
+      <summary>Lista de precios y costo</summary>
+      <div class="prices" id="prices"></div>
+      <div class="note">Cambiá estos valores por tu presupuesto real. Los precios que ves ahora son de ejemplo. Cuantas más rosas se piden, más barata sale cada una — para eso el precio de cada tramo (3, 5, 7, 14, 21) debería ser menor por rosa que el anterior. Para cantidades que no están en la lista, el precio es cantidad × "Resto, por rosa".</div>
+    </details>
+  </div>
+</div>
+
+<script>
+(function(){
+  var KEY='reinaDabi.tablero.v1';
+  var COLORS={
+    rojo:['Rojo','#B3122F'], rosa:['Rosa','#E89BB3'], blanco:['Blanco','#F6F1EC'], amarillo:['Amarillo','#E9B949'],
+    azul:['Azul','#3E6FB0'], violeta:['Violeta','#7B4BA0'], negro:['Negro','#1F1B1D'], verde:['Verde','#5E8F6B'],
+    combinado:['Combinado','conic-gradient(#B3122F,#E9B949,#3E6FB0,#7B4BA0,#B3122F)'], otro:['Otro','#FFFFFF']
+  };
+  var ESTADOS=['Reservado','En preparación','Listo','Entregado'];
+  var TIERS=[1,3,5,7,14,21];
+  var DAYS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  var MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  function $(id){return document.getElementById(id)}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function money(n){return '$'+Math.round(n).toLocaleString('es-AR')}
+  function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  function parse(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+  function today(){var d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+  function addDays(n){var d=today();d.setDate(d.getDate()+n);return iso(d)}
+
+  var S; // estado guardado
+  function seed(){
+    var t=today(), y=t.getFullYear();
+    var maria=new Date(y,9,15); if(maria<t) maria=new Date(y+1,9,15);
+    var sample=[
+      ['Lucía P.','Tigre',false,3,'rojo',4000,2400,'En preparación',addDays(1),''],
+      ['Camila R.','Nordelta',true,14,'blanco',14000,11200,'Reservado',addDays(3),'Entregar en portería, avisar por WhatsApp antes'],
+      ['Julieta S.','San Fernando',true,5,'rosa',6000,4000,'Reservado',addDays(9),''],
+      ['María','Tigre',false,7,'verde',8000,5600,'Reservado',iso(maria),'Cumpleaños — pidió tarjeta con dedicatoria'],
+      ['Sofía M.','Benavídez',true,21,'rojo',19500,16800,'Reservado',addDays(17),'']
+    ];
+    var orders=sample.map(function(r,i){return {id:'s'+i,creado:iso(t),entrega:r[8],nombre:r[0],tel:'',lugar:r[1],envio:r[2],qty:r[3],color:r[4],precio:null,pagado:r[5],costo:r[6],estado:r[7],observaciones:r[9]||''}});
+    var prices={1:3000,3:8000,5:12000,7:16000,14:28000,21:39000};
+    orders.forEach(function(o){o.precio=priceFor(o.qty,prices,1850)});
+    return {orders:orders,prices:prices,perRose:1850,costRose:800,demo:true};
+  }
+  function priceFor(q,prices,perRose){
+    prices=prices||S.prices; perRose=perRose==null?S.perRose:perRose;
+    if(prices[q]!=null && prices[q]!=='') return +prices[q];
+    return Math.round(q*perRose/500)*500;
+  }
+  function load(){
+    try{var raw=localStorage.getItem(KEY); if(raw){S=JSON.parse(raw); return}}catch(e){}
+    S=seed();
+  }
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+  // Formulario
+  var F={qty:9,color:'verde',envio:false,precioManual:false,reservaManual:false};
+  function suggestedReserva(p){return Math.round(p*0.5/500)*500}
+  function refreshForm(){
+    if(!F.precioManual) $('precio').value=priceFor(F.qty);
+    if(!F.reservaManual) $('reserva').value=suggestedReserva(+$('precio').value||0);
+    var d=(+$('precio').value||0)-(+$('reserva').value||0);
+    $('debe').textContent=money(Math.max(d,0));
+    $('colorName').textContent=COLORS[F.color][0];
+    Array.prototype.forEach.call($('swatches').children,function(b){b.setAttribute('aria-pressed',String(b.dataset.c===F.color))});
+    $('retira').setAttribute('aria-pressed',String(!F.envio));
+    $('envia').setAttribute('aria-pressed',String(F.envio));
+  }
+  function buildForm(){
+    var q=$('qty'); q.innerHTML='';
+    for(var i=1;i<=21;i++){var o=document.createElement('option');o.value=i;o.textContent=i+(i===1?' rosa':' rosas');q.appendChild(o)}
+    q.value=F.qty;
+    var sw=$('swatches'); sw.innerHTML='';
+    Object.keys(COLORS).forEach(function(k){
+      var b=document.createElement('button'); b.type='button'; b.className='sw'; b.dataset.c=k;
+      b.style.background=COLORS[k][1]; b.setAttribute('aria-label',COLORS[k][0]); b.setAttribute('aria-pressed','false');
+      b.onclick=function(){F.color=k;refreshForm()}; sw.appendChild(b);
+    });
+    var t=today(); $('hoy').textContent='Fecha de pedido: hoy '+DAYS[t.getDay()]+' '+String(t.getDate()).padStart(2,'0')+'/'+String(t.getMonth()+1).padStart(2,'0')+' (se completa sola)';
+    $('entrega').min=iso(t);
+    q.onchange=function(){F.qty=+q.value;$('otro').value='';F.precioManual=false;F.reservaManual=false;refreshForm()};
+    $('otro').oninput=function(){var n=parseInt($('otro').value,10); if(n>0){F.qty=n;F.precioManual=false;F.reservaManual=false;refreshForm()}};
+    $('precio').oninput=function(){F.precioManual=true;if(!F.reservaManual)$('reserva').value=suggestedReserva(+$('precio').value||0);refreshForm()};
+    $('reserva').oninput=function(){F.reservaManual=true;refreshForm()};
+    $('retira').onclick=function(){F.envio=false;refreshForm()};
+    $('envia').onclick=function(){F.envio=true;refreshForm()};
+    $('form').onsubmit=function(e){
+      e.preventDefault();
+      var nombre=$('nombre').value.trim(), ent=$('entrega').value;
+      if(!ent){$('err').textContent='Falta la fecha de entrega.';return}
+      if(!nombre){$('err').textContent='Falta el nombre.';return}
+      $('err').textContent='';
+      if(S.demo){S.orders=[];S.demo=false}
+      S.orders.push({id:'o'+Date.now(),creado:iso(today()),entrega:ent,nombre:nombre,tel:$('tel').value.trim(),lugar:$('lugar').value.trim(),
+        envio:F.envio,qty:F.qty,color:F.color,precio:+$('precio').value||0,pagado:+$('reserva').value||0,costo:F.qty*S.costRose,estado:'Reservado',
+        observaciones:$('obs').value.trim()});
+      save(); $('nombre').value='';$('tel').value='';$('lugar').value='';$('entrega').value='';$('obs').value='';
+      F.precioManual=false;F.reservaManual=false; refreshForm(); render();
+    };
+    refreshForm();
+  }
+
+  // Lista de precios
+  function buildPrices(){
+    var h='';
+    TIERS.forEach(function(t){h+='<div><label for="p'+t+'">'+t+(t===1?' rosa':' rosas')+'</label><input type="number" id="p'+t+'" data-t="'+t+'" min="0" step="500" value="'+(S.prices[t]==null?'':S.prices[t])+'"></div>'});
+    h+='<div><label for="pr">Resto, por rosa</label><input type="number" id="pr" min="0" step="50" value="'+S.perRose+'"></div>';
+    h+='<div><label for="pc">Costo por rosa</label><input type="number" id="pc" min="0" step="50" value="'+S.costRose+'"></div>';
+    $('prices').innerHTML=h;
+    $('prices').oninput=function(e){
+      var el=e.target;
+      if(el.dataset.t){S.prices[el.dataset.t]=el.value===''?null:+el.value}
+      else if(el.id==='pr'){S.perRose=+el.value||0}
+      else if(el.id==='pc'){S.costRose=+el.value||0}
+      save(); F.precioManual=false;F.reservaManual=false; refreshForm();
+    };
+  }
+
+  // Vista (Pedidos / Balance)
+  var view='pedidos';
+  function setView(v){
+    view=v;
+    $('view-pedidos').style.display=(v==='pedidos'?'grid':'none');
+    $('view-balance').style.display=(v==='balance'?'block':'none');
+    Array.prototype.forEach.call(document.querySelectorAll('.viewtab'),function(b){b.setAttribute('aria-pressed',String(b.dataset.view===v))});
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.viewtab'),function(b){b.onclick=function(){setView(b.dataset.view)}});
+  setView('pedidos');
+
+  // Tablero
+  var tab='activos', mes='todos';
+  function debe(o){return Math.max(o.precio-o.pagado,0)}
+  function render(){
+    $('demoTag').hidden=!S.demo;
+    // meses
+    var ms={}; S.orders.forEach(function(o){ms[o.entrega.slice(0,7)]=1});
+    var keys=Object.keys(ms).sort();
+    if(mes!=='todos' && !ms[mes]) mes='todos';
+    var sel=$('mes'); sel.innerHTML='<option value="todos">Todos los meses</option>'+keys.map(function(k){var p=k.split('-');return '<option value="'+k+'"'+(k===mes?' selected':'')+'>'+MONTHS[+p[1]-1]+' '+p[0]+'</option>'}).join('');
+    var inMes=S.orders.filter(function(o){return mes==='todos'||o.entrega.slice(0,7)===mes});
+    // KPIs sobre el mes
+    var total=0,paid=0,cost=0,roses=0,owedN=0,act=0;
+    inMes.forEach(function(o){total+=o.precio;paid+=o.pagado;cost+=o.costo;roses+=o.qty;if(debe(o)>0)owedN++;if(o.estado!=='Entregado')act++});
+    var owed=total-paid, profit=total-cost;
+    var sorted=inMes.slice().sort(function(a,b){return a.entrega<b.entrega?-1:a.entrega>b.entrega?1:0});
+    var nxt=sorted.filter(function(o){return o.estado!=='Entregado'})[0];
+    $('kpis-pedidos').innerHTML=
+      kpi('Pedidos activos',act,nxt?'próxima: '+fmtDate(nxt.entrega):'sin pendientes')+
+      kpi('Rosas del mes',roses,roses+' rosas cargadas');
+    $('kpis-balance').innerHTML=
+      kpi('Facturado',money(total),roses+' rosas')+
+      kpi('Cobrado (reservas)',money(paid),(total?Math.round(paid/total*100):0)+'% del total')+
+      kpi('Falta cobrar',money(owed),owedN+' pedidos con saldo','var(--bad)')+
+      kpi('Ganancia estimada',money(profit),'margen '+(total?Math.round(profit/total*100):0)+'%','var(--ok)');
+    // Tabla
+    var shown=sorted.filter(function(o){return tab==='todos'||(tab==='activos'?o.estado!=='Entregado':o.estado==='Entregado')});
+    var rows='';
+    shown.forEach(function(o){
+      var diff=Math.round((parse(o.entrega)-today())/86400000), cls='b-ok', txt='en '+diff+' días';
+      if(o.estado==='Entregado'){cls='b-done';txt='entregado'}
+      else{ if(diff<0){txt='atrasado';cls='b-bad'} else if(diff===0){txt='hoy';cls='b-bad'} else if(diff===1){txt='mañana';cls='b-bad'} else if(diff<=2){cls='b-bad'} else if(diff<=7){cls='b-warn'} }
+      var d=debe(o);
+      rows+='<div class="row" data-id="'+esc(o.id)+'">'+
+        '<div><div class="fecha">'+fmtDate(o.entrega)+'</div><span class="badge '+cls+'">'+txt+'</span></div>'+
+        '<div><div class="who">'+esc(o.nombre)+'</div><div class="where">'+esc([o.lugar,o.envio?'Envío':'Retira',o.tel].filter(Boolean).join(' · '))+'</div>'+(o.observaciones?'<div class="obs">📝 '+esc(o.observaciones)+'</div>':'')+'</div>'+
+        '<div><span class="dot" style="background:'+COLORS[o.color][1]+'"></span>'+o.qty+' · '+COLORS[o.color][0]+'</div>'+
+        '<div class="num">'+money(o.precio)+'</div><div class="num">'+money(o.pagado)+'</div>'+
+        '<div class="num"><b>'+(d>0?money(d):'—')+'</b>'+(d>0?'<br><button type="button" class="pay" data-act="pay">Cobrar</button>':'')+'</div>'+
+        '<div><select class="estado" data-act="estado" aria-label="Estado de '+esc(o.nombre)+'">'+ESTADOS.map(function(e){return '<option'+(e===o.estado?' selected':'')+'>'+e+'</option>'}).join('')+'</select></div>'+
+        '<div><button type="button" class="x" data-act="del" aria-label="Borrar pedido de '+esc(o.nombre)+'">×</button></div>'+
+      '</div>';
+    });
+    $('rows').innerHTML=rows||'<div class="empty">No hay pedidos en esta vista. Cargá uno desde el formulario.</div>';
+    var t2=0,p2=0,r2=0; shown.forEach(function(o){t2+=o.precio;p2+=o.pagado;r2+=o.qty});
+    $('tot').innerHTML='<div>Totales</div><div></div><div>'+r2+' rosas</div><div class="num">'+money(t2)+'</div><div class="num">'+money(p2)+'</div><div class="num">'+money(t2-p2)+'</div><div></div><div></div>';
+    // Balance
+    $('pbar').style.width=(total?Math.round(paid/total*100):0)+'%';
+    $('b-paid').textContent=money(paid);$('b-owed').textContent=money(owed);$('b-total').textContent=money(total);$('b-cost').textContent=money(cost);$('b-profit').textContent=money(profit);
+    // Colores
+    var ct={}; inMes.forEach(function(o){ct[o.color]=(ct[o.color]||0)+o.qty});
+    var ck=Object.keys(ct).sort(function(a,b){return ct[b]-ct[a]}), mx=ck.length?ct[ck[0]]:1;
+    $('colors').innerHTML=ck.map(function(k){return '<div class="cbar"><div><span class="dot" style="background:'+COLORS[k][1]+'"></span>'+COLORS[k][0]+'</div><div class="t"><div style="width:'+Math.round(ct[k]/mx*100)+'%"></div></div><b style="text-align:right">'+ct[k]+'</b></div>'}).join('')||'<div class="where" style="margin-top:12px">Todavía no hay rosas cargadas.</div>';
+  }
+  function kpi(l,v,n,c){return '<div class="kpi"><div class="l">'+l+'</div><div class="v"'+(c?' style="color:'+c+'"':'')+'>'+v+'</div><div class="n">'+n+'</div></div>'}
+  function fmtDate(s){var d=parse(s);return DAYS[d.getDay()]+' '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')}
+
+  // Eventos de la tabla
+  $('rows').addEventListener('click',function(e){
+    var b=e.target.closest('[data-act]'); if(!b) return;
+    var row=b.closest('.row'), id=row.dataset.id, i=S.orders.findIndex(function(o){return o.id===id}); if(i<0) return;
+    if(b.dataset.act==='pay'){S.orders[i].pagado=S.orders[i].precio;save();render()}
+    if(b.dataset.act==='del'){ if(confirm('¿Borrar el pedido de '+S.orders[i].nombre+'?')){S.orders.splice(i,1);S.demo=false;save();render()} }
+  });
+  $('rows').addEventListener('change',function(e){
+    var s=e.target.closest('[data-act="estado"]'); if(!s) return;
+    var id=s.closest('.row').dataset.id, o=S.orders.find(function(x){return x.id===id});
+    if(o){o.estado=s.value;save();render()}
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(b){
+    b.onclick=function(){tab=b.dataset.tab;Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(x){x.setAttribute('aria-pressed',String(x===b))});render()};
+  });
+  $('mes').onchange=function(){mes=$('mes').value;render()};
+  $('clear').onclick=function(){ if(confirm('¿Borrar todos los pedidos? No se puede deshacer.')){S.orders=[];S.demo=false;save();render()} };
+  $('csv').onclick=function(){
+    var head=['Fecha pedido','Fecha entrega','Nombre','Teléfono','De dónde es','Entrega / Retira','Cantidad rosas','Color','Seña ($)','Precio final ($)','Falta cobrar ($)','Estado','Observaciones'];
+    var lines=[head].concat(S.orders.slice().sort(function(a,b){return a.entrega<b.entrega?-1:1}).map(function(o){
+      return [o.creado,o.entrega,o.nombre,o.tel,o.lugar,o.envio?'Envío':'Retira',o.qty,COLORS[o.color][0],o.pagado,o.precio,debe(o),o.estado,o.observaciones||''];
+    }));
+    var csv='﻿'+lines.map(function(r){return r.map(function(c){return '"'+String(c==null?'':c).replace(/"/g,'""')+'"'}).join(';')}).join('\r\n');
+    var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='pedidos-reina-dabi.csv'; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href)},1000);
+  };
+
+  load(); buildForm(); buildPrices(); render();
+})();
+</script>
+</body>
+</html>
