@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Reina Dabi — Tablero de pedidos</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7A1F3D">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-apple-touch.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reina Dabi">
 <style>
 :root{
   --bg:#FBF6F3; --card:#FFFFFF; --line:#EADFDA; --ink:#2A1B20; --muted:#6E5D63;
@@ -412,6 +419,10 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   };
 
   load(); buildForm(); buildPrices(); render();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
+  }
 })();
 </script>
 </body>
