@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Reina Dabi — Tablero de pedidos</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#7A1F3D">
+<meta name="theme-color" content="#8E1E48">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-apple-touch.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,8 @@
 <style>
 :root{
   --bg:#FBF6F3; --card:#FFFFFF; --line:#EADFDA; --ink:#2A1B20; --muted:#6E5D63;
-  --accent:#7A1F3D; --accent-soft:#F0DDE3; --ok:#0F5A52; --warn:#7A4B00; --bad:#8F2A12;
+  --accent:#8E1E48; --accent-soft:#F8DCE7; --ok:#0F5A52; --warn:#7A4B00; --bad:#8F2A12;
+  --gold:#C08A2E; --gold-bright:#F0C24B;
   --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
   --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif;
 }
@@ -22,11 +23,14 @@
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:3px solid #1F4A7A;outline-offset:2px}
+:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
 .wrap{max-width:1280px;margin:0 auto;padding:28px 24px 48px}
-header{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;margin-bottom:20px}
+header{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid var(--accent-soft);padding-bottom:18px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand img{height:64px;width:auto;flex:none}
 h1{font-family:var(--serif);font-size:34px;line-height:1;margin:0;color:var(--accent);font-weight:700}
 .sub{font-size:14px;color:var(--muted);margin-top:4px}
+.tagline{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--gold);margin-top:2px}
 .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .pill{height:44px;padding:0 16px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:600}
 .btn{height:44px;padding:0 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;font-weight:600}
@@ -34,17 +38,17 @@ h1{font-family:var(--serif);font-size:34px;line-height:1;margin:0;color:var(--ac
 .viewtabs{display:flex;gap:8px;margin-bottom:20px}
 .login-wrap{max-width:380px;margin:80px auto}
 .viewtab{height:42px;padding:0 20px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:700;font-size:15px}
-.viewtab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.viewtab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 2px var(--gold-bright)}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:32px;align-items:start}
 @media (max-width:1000px){.layout{grid-template-columns:1fr}}
 .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
 @media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:14px;padding:14px 16px}
 .kpi .l{font-size:13px;color:var(--muted)}
 .kpi .v{font-family:var(--serif);font-size:26px;font-weight:700;margin:4px 0 2px}
 .kpi .n{font-size:12px;color:var(--muted)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px}
-.card h2{font-family:var(--serif);font-size:22px;margin:0}
+.card h2{font-family:var(--serif);font-size:22px;margin:0;color:var(--accent)}
 .head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;padding:18px 20px 12px}
 .tabs{display:flex;gap:6px}
 .tab{height:36px;padding:0 14px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:600;font-size:14px}
@@ -85,7 +89,7 @@ textarea.f{width:100%;min-height:64px;border:1px solid #D9C9C2;border-radius:10p
 .qtyrow{display:grid;grid-template-columns:1fr 110px;gap:10px}
 .swatches{display:flex;flex-wrap:wrap;gap:12px}
 .sw{width:44px;height:44px;border-radius:50%;border:none;padding:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
-.sw[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--accent)}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--gold)}
 .seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid #D9C9C2;border-radius:10px;overflow:hidden}
 .seg button{height:44px;border:none;background:#fff;font-weight:600}
 .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
@@ -96,7 +100,7 @@ textarea.f{width:100%;min-height:64px;border:1px solid #D9C9C2;border-radius:10p
 .save{width:100%;height:52px;border-radius:12px;margin-top:16px;font-size:16px}
 .err{color:var(--bad);font-size:13px;margin-top:8px;min-height:18px}
 details.card{margin-top:20px}
-summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px;font-weight:700}
+summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px;font-weight:700;color:var(--accent)}
 .prices{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;padding:0 20px 20px}
 .prices input{height:40px}
 .note{padding:0 20px 18px;color:var(--muted);font-size:13px}
@@ -105,9 +109,13 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
 <body>
 <div class="wrap" id="app" style="display:none">
   <header>
-    <div>
-      <h1>Reina Dabi</h1>
-      <div class="sub">Tablero de pedidos de rosas</div>
+    <div class="brand">
+      <img src="logo-mark.png" alt="Reina Dabi" width="180" height="110">
+      <div>
+        <h1>Reina Dabi</h1>
+        <div class="sub">Tablero de pedidos de rosas</div>
+        <div class="tagline">"detalles que duran para siempre"</div>
+      </div>
     </div>
     <div class="bar">
       <label for="mes" style="margin:0;position:absolute;left:-9999px">Mes de entrega</label>
@@ -215,8 +223,9 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
 
 <div class="wrap" id="loginGate" style="display:none">
   <form class="card pad login-wrap" id="loginForm" autocomplete="off">
-    <h2 style="font-family:var(--serif);font-size:24px;margin:0 0 4px">Reina Dabi</h2>
-    <div class="sub" style="margin-bottom:18px">Ingresá para ver el tablero</div>
+    <div style="text-align:center;margin-bottom:8px"><img src="logo-mark.png" alt="Reina Dabi" width="150" height="92"></div>
+    <h2 style="font-family:var(--serif);font-size:24px;margin:0 0 4px;text-align:center">Reina Dabi</h2>
+    <div class="sub" style="margin-bottom:18px;text-align:center">Ingresá para ver el tablero</div>
     <div class="fg" style="margin-top:0"><label for="loginEmail">Email</label><input type="text" id="loginEmail" autocomplete="username"></div>
     <div class="fg"><label for="loginPass">Contraseña</label><input type="password" id="loginPass" autocomplete="current-password"></div>
     <div class="err" id="loginErr" role="alert"></div>
@@ -247,9 +256,13 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   var DEFAULT_PERROSE=1850, DEFAULT_COSTROSE=800;
 
   var COLORS={
-    rojo:['Rojo','#B3122F'], rosa:['Rosa','#E89BB3'], blanco:['Blanco','#F6F1EC'], amarillo:['Amarillo','#E9B949'],
-    azul:['Azul','#3E6FB0'], violeta:['Violeta','#7B4BA0'], negro:['Negro','#1F1B1D'], verde:['Verde','#5E8F6B'],
-    combinado:['Combinado','conic-gradient(#B3122F,#E9B949,#3E6FB0,#7B4BA0,#B3122F)'], otro:['Otro','#FFFFFF']
+    rojo:['Rojo','#B3122F'], vino:['Vino','#6E1224'], rosa:['Rosa','#E89BB3'], fucsia:['Fucsia','#E4357B'],
+    blanco:['Blanco','#F6F1EC'], champagne:['Champagne','#E8D9B5'], amarillo:['Amarillo','#E9B949'],
+    naranja:['Naranja','#E8752F'], durazno:['Durazno','#F2957A'], lila:['Lila','#C9A6D9'],
+    violeta:['Violeta','#7B4BA0'], azul:['Azul','#3E6FB0'], celeste:['Celeste','#7EC8E3'],
+    verde:['Verde','#5E8F6B'], negro:['Negro','#1F1B1D'], dorado:['Dorado','#C9962C'], plateado:['Plateado','#C7C7C9'],
+    arcoiris:['Arcoíris','conic-gradient(#E4362F,#E9B949,#5E8F6B,#3E6FB0,#7B4BA0,#E4362F)'],
+    combinado:['Combinado','conic-gradient(#8E1E48,#C9962C,#E4357B,#8E1E48)'], otro:['Otro','#FFFFFF']
   };
   var ESTADOS=['Reservado','En preparación','Listo','Entregado'];
   var TIERS=[1,3,5,7,14,21];

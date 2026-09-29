@@ -1,5 +1,5 @@
-var CACHE='reina-dabi-v1';
-var ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
+var CACHE='reina-dabi-v2';
+var ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./logo-mark.png'];
 
 self.addEventListener('install',function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(ASSETS)}));
