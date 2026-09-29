@@ -1,4 +1,4 @@
-var CACHE='reina-dabi-v2';
+var CACHE='reina-dabi-v3';
 var ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./logo-mark.png'];
 
 self.addEventListener('install',function(e){

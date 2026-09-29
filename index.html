@@ -20,6 +20,7 @@
   --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',sans-serif;
 }
 *{box-sizing:border-box}
+html,body{overflow-x:hidden}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -40,7 +41,8 @@ h1{font-family:var(--serif);font-size:34px;line-height:1;margin:0;color:var(--ac
 .viewtab{height:42px;padding:0 20px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:700;font-size:15px}
 .viewtab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 2px var(--gold-bright)}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:32px;align-items:start}
-@media (max-width:1000px){.layout{grid-template-columns:1fr}}
+.layout>*{min-width:0}
+@media (max-width:1000px){.layout{grid-template-columns:minmax(0,1fr)}}
 .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
 @media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .kpi{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:14px;padding:14px 16px}
@@ -59,6 +61,23 @@ select.mini{height:36px;border:1px solid #DCCBC4;border-radius:10px;padding:0 10
 .row.th{background:#F7EFEB;font-size:13px;font-weight:600;color:#5F4E54;border-top:none}
 .row.tot{background:var(--bg);border-top:2px solid var(--line);font-weight:600}
 .num{text-align:right;font-variant-numeric:tabular-nums}
+.c-money{display:contents}
+@media (max-width:700px){
+  .row.th{display:none}
+  .row{min-width:0;grid-template-columns:1fr auto;grid-template-areas:"fecha del" "cliente cliente" "rosas rosas" "money money" "estado estado";row-gap:10px;column-gap:12px;padding:16px}
+  .c-fecha{grid-area:fecha}
+  .c-cliente{grid-area:cliente}
+  .c-rosas{grid-area:rosas}
+  .c-estado{grid-area:estado}
+  .c-estado .estado{height:44px}
+  .c-del{grid-area:del;justify-self:end;align-self:start}
+  .c-money{display:flex;flex-direction:column;gap:6px;grid-area:money;background:var(--bg);border-radius:10px;padding:10px 12px}
+  .c-precio,.c-reserva,.c-debe{display:flex;justify-content:space-between;text-align:left}
+  .c-precio::before{content:"Precio";color:var(--muted);font-weight:400}
+  .c-reserva::before{content:"Reserva";color:var(--muted);font-weight:400}
+  .c-debe::before{content:"Debe";color:var(--muted);font-weight:400}
+  .row.tot .c-cliente,.row.tot .c-estado{display:none}
+}
 .fecha{font-size:17px;font-weight:700}
 .badge{display:inline-block;margin-top:4px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
 .b-ok{background:#DFF1EE;color:var(--ok)} .b-warn{background:#FFF0C9;color:var(--warn)} .b-bad{background:#FBE3DC;color:var(--bad)} .b-done{background:#ECE7E5;color:#5F4E54}
@@ -145,7 +164,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
           </div>
         </div>
         <div class="scroll">
-          <div class="row th"><div>Entrega</div><div>Cliente</div><div>Rosas</div><div class="num">Precio</div><div class="num">Reserva</div><div class="num">Debe</div><div>Estado</div><div></div></div>
+          <div class="row th"><div>Entrega</div><div>Cliente</div><div>Rosas</div><div class="c-money"><div class="num">Precio</div><div class="num">Reserva</div><div class="num">Debe</div></div><div>Estado</div><div></div></div>
           <div id="rows"></div>
           <div class="row tot" id="tot"></div>
         </div>
@@ -390,18 +409,21 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
       else{ if(diff<0){txt='atrasado';cls='b-bad'} else if(diff===0){txt='hoy';cls='b-bad'} else if(diff===1){txt='mañana';cls='b-bad'} else if(diff<=2){cls='b-bad'} else if(diff<=7){cls='b-warn'} }
       var d=debe(o);
       rows+='<div class="row" data-id="'+esc(o.id)+'">'+
-        '<div><div class="fecha">'+fmtDate(o.entrega)+'</div><span class="badge '+cls+'">'+txt+'</span></div>'+
-        '<div><div class="who">'+esc(o.nombre)+'</div><div class="where">'+esc([o.lugar,o.envio?'Envío':'Retira',o.tel].filter(Boolean).join(' · '))+'</div>'+(o.observaciones?'<div class="obs">📝 '+esc(o.observaciones)+'</div>':'')+'</div>'+
-        '<div><span class="dot" style="background:'+COLORS[o.color][1]+'"></span>'+o.qty+' · '+COLORS[o.color][0]+'</div>'+
-        '<div class="num">'+money(o.precio)+'</div><div class="num">'+money(o.pagado)+'</div>'+
-        '<div class="num"><b>'+(d>0?money(d):'—')+'</b>'+(d>0?'<br><button type="button" class="pay" data-act="pay">Cobrar</button>':'')+'</div>'+
-        '<div><select class="estado" data-act="estado" aria-label="Estado de '+esc(o.nombre)+'">'+ESTADOS.map(function(e){return '<option'+(e===o.estado?' selected':'')+'>'+e+'</option>'}).join('')+'</select></div>'+
-        '<div><button type="button" class="x" data-act="del" aria-label="Borrar pedido de '+esc(o.nombre)+'">×</button></div>'+
+        '<div class="c-fecha"><div class="fecha">'+fmtDate(o.entrega)+'</div><span class="badge '+cls+'">'+txt+'</span></div>'+
+        '<div class="c-cliente"><div class="who">'+esc(o.nombre)+'</div><div class="where">'+esc([o.lugar,o.envio?'Envío':'Retira',o.tel].filter(Boolean).join(' · '))+'</div>'+(o.observaciones?'<div class="obs">📝 '+esc(o.observaciones)+'</div>':'')+'</div>'+
+        '<div class="c-rosas"><span class="dot" style="background:'+COLORS[o.color][1]+'"></span>'+o.qty+' · '+COLORS[o.color][0]+'</div>'+
+        '<div class="c-money">'+
+          '<div class="c-precio num">'+money(o.precio)+'</div>'+
+          '<div class="c-reserva num">'+money(o.pagado)+'</div>'+
+          '<div class="c-debe num"><b>'+(d>0?money(d):'—')+'</b>'+(d>0?' <button type="button" class="pay" data-act="pay">Cobrar</button>':'')+'</div>'+
+        '</div>'+
+        '<div class="c-estado"><select class="estado" data-act="estado" aria-label="Estado de '+esc(o.nombre)+'">'+ESTADOS.map(function(e){return '<option'+(e===o.estado?' selected':'')+'>'+e+'</option>'}).join('')+'</select></div>'+
+        '<div class="c-del"><button type="button" class="x" data-act="del" aria-label="Borrar pedido de '+esc(o.nombre)+'">×</button></div>'+
       '</div>';
     });
     $('rows').innerHTML=rows||'<div class="empty">No hay pedidos en esta vista. Cargá uno desde el formulario.</div>';
     var t2=0,p2=0,r2=0; shown.forEach(function(o){t2+=o.precio;p2+=o.pagado;r2+=o.qty});
-    $('tot').innerHTML='<div>Totales</div><div></div><div>'+r2+' rosas</div><div class="num">'+money(t2)+'</div><div class="num">'+money(p2)+'</div><div class="num">'+money(t2-p2)+'</div><div></div><div></div>';
+    $('tot').innerHTML='<div class="c-fecha">Totales</div><div class="c-cliente"></div><div class="c-rosas">'+r2+' rosas</div><div class="c-money"><div class="c-precio num">'+money(t2)+'</div><div class="c-reserva num">'+money(p2)+'</div><div class="c-debe num">'+money(t2-p2)+'</div></div><div class="c-estado"></div><div class="c-del"></div>';
     // Balance
     $('pbar').style.width=(total?Math.round(paid/total*100):0)+'%';
     $('b-paid').textContent=money(paid);$('b-owed').textContent=money(owed);$('b-total').textContent=money(total);$('b-cost').textContent=money(cost);$('b-profit').textContent=money(profit);
