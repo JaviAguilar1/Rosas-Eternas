@@ -477,23 +477,11 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     if(d.slice(0,2)!=='54') d='549'+d;
     return d;
   }
-  function waMessage(o){
-    var d=debe(o);
-    return 'Hola '+o.nombre+'! Te escribo por tu pedido de Reina Dabi 🌹'+
-      '\nEntrega: '+fmtDate(o.entrega)+
-      '\n'+o.qty+' rosas '+COLORS[o.color][0]+
-      '\nPrecio: '+money(o.precio)+
-      (d>0?('\nSeña: '+money(o.pagado)+'\nFalta: '+money(d)):'\n¡Ya está todo pago!')+
-      (o.observaciones?('\n'+o.observaciones):'');
-  }
-  function waLink(o){
-    var phone=waPhone(o.tel), text=encodeURIComponent(waMessage(o));
-    return phone?('https://wa.me/'+phone+'?text='+text):('https://api.whatsapp.com/send?text='+text);
-  }
   function openWhatsAppBusiness(o){
-    var phone=waPhone(o.tel), text=encodeURIComponent(waMessage(o));
-    var bizUrl='whatsapp-business://send?phone='+phone+'&text='+text;
-    var webUrl=waLink(o);
+    var phone=waPhone(o.tel);
+    if(!phone){ alert('Este pedido no tiene teléfono cargado.'); return; }
+    var bizUrl='whatsapp-business://send?phone='+phone;
+    var webUrl='https://wa.me/'+phone;
     var fallback=setTimeout(function(){ window.location.href=webUrl; },1200);
     function cancelFallback(){ clearTimeout(fallback); document.removeEventListener('visibilitychange',cancelFallback); window.removeEventListener('blur',cancelFallback); }
     document.addEventListener('visibilitychange',cancelFallback);
