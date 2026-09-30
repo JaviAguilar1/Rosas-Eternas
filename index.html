@@ -57,7 +57,8 @@ h1{font-family:var(--serif);font-size:34px;line-height:1;margin:0;color:var(--ac
 .tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
 select.mini{height:36px;border:1px solid #DCCBC4;border-radius:10px;padding:0 10px;background:#fff}
 .scroll{overflow-x:auto}
-.row{display:grid;grid-template-columns:120px minmax(150px,1fr) 118px 84px 84px 84px 132px 44px;gap:10px;padding:12px 20px;align-items:center;border-top:1px solid #F0E6E1;min-width:860px}
+.row{display:grid;grid-template-columns:120px minmax(150px,1fr) 118px 84px 84px 84px 132px 80px;gap:10px;padding:12px 20px;align-items:center;border-top:1px solid #F0E6E1;min-width:900px}
+.c-del{display:flex;gap:6px}
 .row.th{background:#F7EFEB;font-size:13px;font-weight:600;color:#5F4E54;border-top:none}
 .row.tot{background:var(--bg);border-top:2px solid var(--line);font-weight:600}
 .num{text-align:right;font-variant-numeric:tabular-nums}
@@ -87,6 +88,7 @@ select.mini{height:36px;border:1px solid #DCCBC4;border-radius:10px;padding:0 10
 .estado{height:34px;border:1px solid #DCCBC4;border-radius:10px;padding:0 6px;background:#fff;font-size:13px;font-weight:600;width:100%}
 .x{width:36px;height:36px;border-radius:10px;border:1px solid #DCCBC4;background:#fff;font-size:18px;line-height:1}
 .pay{margin-top:4px;padding:2px 8px;border:1px solid var(--accent);border-radius:999px;background:#fff;color:var(--accent);font-size:12px;font-weight:600;height:auto}
+.wa{margin-top:4px;margin-left:6px;padding:2px 8px;border:1px solid #25D366;border-radius:999px;background:#fff;color:#128C7E;font-size:12px;font-weight:600;text-decoration:none;display:inline-block}
 .empty{padding:36px 20px;text-align:center;color:var(--muted)}
 .pad{padding:20px}
 .progress{height:16px;border-radius:999px;background:var(--accent-soft);overflow:hidden;margin:14px 0 10px}
@@ -177,7 +179,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     </main>
 
     <form class="card" id="form" autocomplete="off">
-      <h2 style="font-family:var(--serif);font-size:24px;margin:0">Nuevo pedido</h2>
+      <h2 style="font-family:var(--serif);font-size:24px;margin:0" id="formTitle">Nuevo pedido</h2>
       <div class="sub" id="hoy"></div>
 
       <div class="fg f-entrega"><label for="entrega">Fecha de entrega</label><input type="date" id="entrega" required></div>
@@ -215,7 +217,8 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
         <div class="r debe"><span>Cuánto debe</span><span id="debe" style="color:var(--bad)"></span></div>
       </div>
       <div class="err" id="err" role="alert"></div>
-      <button class="btn save" type="submit">Guardar pedido</button>
+      <button class="btn save" type="submit" id="saveBtn">Guardar pedido</button>
+      <button class="btn ghost save" type="button" id="cancelEdit" style="display:none;margin-top:8px">Cancelar edición</button>
     </form>
   </div>
 
@@ -339,12 +342,45 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
       if(!ent){$('err').textContent='Falta la fecha de entrega.';return}
       if(!nombre){$('err').textContent='Falta el nombre.';return}
       $('err').textContent='';
-      ordersRef.push({creado:iso(today()),entrega:ent,nombre:nombre,tel:$('tel').value.trim(),lugar:$('lugar').value.trim(),
-        envio:F.envio,qty:F.qty,color:F.color,precio:+$('precio').value||0,pagado:+$('reserva').value||0,costo:F.qty*S.costRose,estado:'Reservado',
-        observaciones:$('obs').value.trim()});
-      $('nombre').value='';$('tel').value='';$('lugar').value='';$('entrega').value='';$('obs').value='';
-      F.precioManual=false;F.reservaManual=false; refreshForm();
+      var data={entrega:ent,nombre:nombre,tel:$('tel').value.trim(),lugar:$('lugar').value.trim(),
+        envio:F.envio,qty:F.qty,color:F.color,precio:+$('precio').value||0,pagado:+$('reserva').value||0,costo:F.qty*S.costRose,
+        observaciones:$('obs').value.trim()};
+      if(editingId){
+        ordersRef.child(editingId).update(data);
+        exitEdit();
+      }else{
+        data.creado=iso(today()); data.estado='Reservado';
+        ordersRef.push(data);
+        $('nombre').value='';$('tel').value='';$('lugar').value='';$('entrega').value='';$('obs').value='';
+        F.precioManual=false;F.reservaManual=false; refreshForm();
+      }
     };
+    $('cancelEdit').onclick=function(){ exitEdit(); };
+    refreshForm();
+  }
+
+  function enterEdit(o){
+    editingId=o.id;
+    F.qty=o.qty; F.color=o.color; F.envio=!!o.envio; F.precioManual=true; F.reservaManual=true;
+    $('entrega').value=o.entrega; $('otro').value='';
+    $('nombre').value=o.nombre||''; $('tel').value=o.tel||''; $('lugar').value=o.lugar||'';
+    $('obs').value=o.observaciones||''; $('precio').value=o.precio; $('reserva').value=o.pagado;
+    if(o.qty>=1&&o.qty<=21){ $('qty').value=o.qty; } else { $('otro').value=o.qty; }
+    refreshForm();
+    $('formTitle').textContent='Editar pedido';
+    $('saveBtn').textContent='Guardar cambios';
+    $('cancelEdit').style.display='';
+    $('err').textContent='';
+    $('form').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function exitEdit(){
+    editingId=null;
+    $('nombre').value='';$('tel').value='';$('lugar').value='';$('entrega').value='';$('obs').value='';
+    F.qty=9;F.color='verde';F.envio=false;F.precioManual=false;F.reservaManual=false;
+    $('formTitle').textContent='Nuevo pedido';
+    $('saveBtn').textContent='Guardar pedido';
+    $('cancelEdit').style.display='none';
+    $('err').textContent='';
     refreshForm();
   }
 
@@ -376,7 +412,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   setView('pedidos');
 
   // Tablero
-  var tab='activos', mes='todos';
+  var tab='activos', mes='todos', editingId=null;
   function debe(o){return Math.max(o.precio-o.pagado,0)}
   function render(){
     // meses
@@ -409,7 +445,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
       var d=debe(o);
       rows+='<div class="row" data-id="'+esc(o.id)+'">'+
         '<div class="c-fecha"><div class="fecha">'+fmtDate(o.entrega)+'</div><span class="badge '+cls+'">'+txt+'</span></div>'+
-        '<div class="c-cliente"><div class="who">'+esc(o.nombre)+'</div><div class="where">'+esc([o.lugar,o.envio?'Envío':'Retira',o.tel].filter(Boolean).join(' · '))+'</div>'+(o.observaciones?'<div class="obs">📝 '+esc(o.observaciones)+'</div>':'')+'</div>'+
+        '<div class="c-cliente"><div class="who">'+esc(o.nombre)+'</div><div class="where">'+esc([o.lugar,o.envio?'Envío':'Retira',o.tel].filter(Boolean).join(' · '))+'</div>'+(o.observaciones?'<div class="obs">📝 '+esc(o.observaciones)+'</div>':'')+'<a class="wa" href="'+esc(waLink(o))+'" target="_blank" rel="noopener">WhatsApp</a></div>'+
         '<div class="c-rosas"><span class="dot" style="background:'+COLORS[o.color][1]+'"></span>'+o.qty+' · '+COLORS[o.color][0]+'</div>'+
         '<div class="c-money">'+
           '<div class="c-precio num">'+money(o.precio)+'</div>'+
@@ -417,7 +453,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
           '<div class="c-debe num"><b>'+(d>0?money(d):'—')+'</b>'+(d>0?' <button type="button" class="pay" data-act="pay">Cobrar</button>':'')+'</div>'+
         '</div>'+
         '<div class="c-estado"><select class="estado" data-act="estado" aria-label="Estado de '+esc(o.nombre)+'">'+ESTADOS.map(function(e){return '<option'+(e===o.estado?' selected':'')+'>'+e+'</option>'}).join('')+'</select></div>'+
-        '<div class="c-del"><button type="button" class="x" data-act="del" aria-label="Borrar pedido de '+esc(o.nombre)+'">×</button></div>'+
+        '<div class="c-del"><button type="button" class="x" data-act="edit" aria-label="Editar pedido de '+esc(o.nombre)+'">✎</button><button type="button" class="x" data-act="del" aria-label="Borrar pedido de '+esc(o.nombre)+'">×</button></div>'+
       '</div>';
     });
     $('rows').innerHTML=rows||'<div class="empty">No hay pedidos en esta vista. Cargá uno desde el formulario.</div>';
@@ -434,12 +470,33 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   function kpi(l,v,n,c){return '<div class="kpi"><div class="l">'+l+'</div><div class="v"'+(c?' style="color:'+c+'"':'')+'>'+v+'</div><div class="n">'+n+'</div></div>'}
   function fmtDate(s){var d=parse(s);return DAYS[d.getDay()]+' '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')}
 
+  function waPhone(tel){
+    var d=String(tel||'').replace(/\D/g,'');
+    if(!d) return '';
+    if(d.slice(0,2)!=='54') d='549'+d;
+    return d;
+  }
+  function waMessage(o){
+    var d=debe(o);
+    return 'Hola '+o.nombre+'! Te escribo por tu pedido de Reina Dabi 🌹'+
+      '\nEntrega: '+fmtDate(o.entrega)+
+      '\n'+o.qty+' rosas '+COLORS[o.color][0]+
+      '\nPrecio: '+money(o.precio)+
+      (d>0?('\nSeña: '+money(o.pagado)+'\nFalta: '+money(d)):'\n¡Ya está todo pago!')+
+      (o.observaciones?('\n'+o.observaciones):'');
+  }
+  function waLink(o){
+    var phone=waPhone(o.tel), text=encodeURIComponent(waMessage(o));
+    return phone?('https://wa.me/'+phone+'?text='+text):('https://api.whatsapp.com/send?text='+text);
+  }
+
   // Eventos de la tabla
   $('rows').addEventListener('click',function(e){
     var b=e.target.closest('[data-act]'); if(!b) return;
     var row=b.closest('.row'), id=row.dataset.id, o=S.orders.find(function(x){return x.id===id}); if(!o) return;
     if(b.dataset.act==='pay'){ordersRef.child(id).update({pagado:o.precio})}
     if(b.dataset.act==='del'){ if(confirm('¿Borrar el pedido de '+o.nombre+'?')){ordersRef.child(id).remove()} }
+    if(b.dataset.act==='edit'){ enterEdit(o); }
   });
   $('rows').addEventListener('change',function(e){
     var s=e.target.closest('[data-act="estado"]'); if(!s) return;
