@@ -474,19 +474,29 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   function waPhone(tel){
     var d=String(tel||'').replace(/\D/g,'');
     if(!d) return '';
+    if(d.charAt(0)==='0') d=d.slice(1);
     if(d.slice(0,2)!=='54') d='549'+d;
     return d;
   }
   function openWhatsAppBusiness(o){
     var phone=waPhone(o.tel);
-    if(!phone){ alert('Este pedido no tiene teléfono cargado.'); return; }
-    var bizUrl='whatsapp-business://send?phone='+phone;
-    var webUrl='https://wa.me/'+phone;
-    var fallback=setTimeout(function(){ window.location.href=webUrl; },1200);
-    function cancelFallback(){ clearTimeout(fallback); document.removeEventListener('visibilitychange',cancelFallback); window.removeEventListener('blur',cancelFallback); }
-    document.addEventListener('visibilitychange',cancelFallback);
-    window.addEventListener('blur',cancelFallback);
-    window.location.href=bizUrl;
+    if(!phone){ alert('Este pedido no tiene telefono cargado.'); return; }
+    if(!/Android/i.test(navigator.userAgent)){ window.open('https://wa.me/'+phone,'_blank'); return; }
+    // Android: fuerza el package de WhatsApp Business (com.whatsapp.w4b).
+    // Sin browser_fallback_url a proposito: si fallara, preferimos avisar antes que
+    // mandar a api.whatsapp.com, que termina abriendo el WhatsApp comun.
+    var a=document.createElement('a');
+    a.href='intent://send?phone='+phone+'#Intent;scheme=whatsapp;package=com.whatsapp.w4b;end';
+    a.style.display='none';
+    document.body.appendChild(a);
+    function done(){ clearTimeout(t); document.removeEventListener('visibilitychange',done); }
+    var t=setTimeout(function(){
+      document.removeEventListener('visibilitychange',done);
+      if(!document.hidden) alert('No se pudo abrir WhatsApp Business. Numero: +'+phone);
+    },1500);
+    document.addEventListener('visibilitychange',done);
+    a.click();
+    document.body.removeChild(a);
   }
 
   // Eventos de la tabla
