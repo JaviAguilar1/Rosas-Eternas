@@ -53,8 +53,8 @@ h1{font-family:var(--serif);font-size:34px;line-height:1;margin:0;color:var(--ac
 .card h2{font-family:var(--serif);font-size:22px;margin:0;color:var(--accent)}
 .head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;padding:18px 20px 12px}
 .tabs{display:flex;gap:6px}
-.tab{height:36px;padding:0 14px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:600;font-size:14px}
-.tab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab,.mtab{height:36px;padding:0 14px;border-radius:999px;border:1px solid #DCCBC4;background:#fff;font-weight:600;font-size:14px}
+.tab[aria-pressed="true"],.mtab[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
 select.mini{height:36px;border:1px solid #DCCBC4;border-radius:10px;padding:0 10px;background:#fff}
 .scroll{overflow-x:auto}
 .row{display:grid;grid-template-columns:120px minmax(150px,1fr) 118px 84px 84px 84px 132px 80px;gap:10px;padding:12px 20px;align-items:center;border-top:1px solid #F0E6E1;min-width:900px}
@@ -239,7 +239,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
 
     <section class="card pad" style="margin-top:20px">
       <h2>Rosas por color por mes</h2>
-      <div class="sub">Todos los pedidos, según el mes de entrega</div>
+      <div class="sub">Elegí el mes · cuenta todos los pedidos de ese mes de entrega</div>
       <div id="colorsMes"></div>
     </section>
 
@@ -424,7 +424,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   setView('pedidos');
 
   // Tablero
-  var tab='activos', mes='todos', editingId=null;
+  var tab='activos', mes='todos', editingId=null, mesColor='', mesPrev='todos';
   function debe(o){return Math.max(o.precio-o.pagado,0)}
   function render(){
     // meses
@@ -479,13 +479,18 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     var ct={}, ctTot=0; inMes.forEach(function(o){if(o.estado==='Listo'||o.estado==='Entregado')return; ct[o.color]=(ct[o.color]||0)+o.qty; ctTot+=o.qty});
     var ck=Object.keys(ct).sort(function(a,b){return ct[b]-ct[a]}), mx=ck.length?ct[ck[0]]:1;
     $('colors').innerHTML=ck.length?ck.map(function(k){return '<div class="cbar"><div><span class="dot" style="background:'+colorDe(k)[1]+'"></span>'+colorDe(k)[0]+'</div><div class="t"><div style="width:'+Math.round(ct[k]/mx*100)+'%"></div></div><b style="text-align:right">'+ct[k]+'</b></div>'}).join('')+'<div class="line" style="margin-top:12px"><span>Total a armar</span><b>'+ctTot+' rosas</b></div>':'<div class="where" style="margin-top:12px">No hay rosas para armar en este momento.</div>';
-    // Balance: rosas por color de cada mes (todos los pedidos)
-    var pm={}; inMes.forEach(function(o){var m=o.entrega.slice(0,7); pm[m]=pm[m]||{tot:0,c:{}}; pm[m].c[o.color]=(pm[m].c[o.color]||0)+o.qty; pm[m].tot+=o.qty});
-    $('colorsMes').innerHTML=Object.keys(pm).sort().reverse().map(function(m){
-      var p=m.split('-'), c=pm[m].c;
-      return '<div class="line" style="flex-wrap:wrap;gap:6px 14px"><b style="flex:1 0 100%;display:flex;justify-content:space-between"><span style="color:var(--ink)">'+MONTHS[+p[1]-1]+' '+p[0]+'</span><span>'+pm[m].tot+' rosas</span></b>'+
-        Object.keys(c).sort(function(a,b){return c[b]-c[a]}).map(function(k){return '<span style="color:var(--ink)"><span class="dot" style="background:'+colorDe(k)[1]+'"></span>'+colorDe(k)[0]+' '+c[k]+'</span>'}).join('')+'</div>';
-    }).join('')||'<div class="where" style="margin-top:12px">Todavía no hay rosas cargadas.</div>';
+    // Balance: rosas por color del mes elegido (todos los pedidos de ese mes)
+    var pm={}; S.orders.forEach(function(o){var m=o.entrega.slice(0,7); pm[m]=pm[m]||{tot:0,c:{}}; pm[m].c[o.color]=(pm[m].c[o.color]||0)+o.qty; pm[m].tot+=o.qty});
+    var mk=Object.keys(pm).sort();
+    if(mes!==mesPrev){ if(mes!=='todos') mesColor=mes; mesPrev=mes; }
+    if(!pm[mesColor]){ var hoy=new Date(), cur=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0'); mesColor=pm[cur]?cur:(mk.filter(function(x){return x>cur})[0]||mk[mk.length-1]||cur); }
+    var hm=mk.length?'<div class="tabs" role="group" aria-label="Mes" style="flex-wrap:wrap;margin-top:12px">'+mk.map(function(x){var q=x.split('-');return '<button type="button" class="mtab" data-mc="'+x+'" aria-pressed="'+(x===mesColor)+'">'+MONTHS[+q[1]-1].slice(0,3)+' '+q[0]+'</button>'}).join('')+'</div>':'';
+    if(pm[mesColor]){
+      var cm=pm[mesColor].c, km=Object.keys(cm).sort(function(a,b){return cm[b]-cm[a]}), mxm=cm[km[0]];
+      hm+=km.map(function(x){return '<div class="cbar"><div><span class="dot" style="background:'+colorDe(x)[1]+'"></span>'+colorDe(x)[0]+'</div><div class="t"><div style="width:'+Math.round(cm[x]/mxm*100)+'%"></div></div><b style="text-align:right">'+cm[x]+'</b></div>'}).join('')+
+        '<div class="line" style="margin-top:12px"><span>Total del mes</span><b>'+pm[mesColor].tot+' rosas</b></div>';
+    } else hm+='<div class="where" style="margin-top:12px">Todavía no hay rosas cargadas.</div>';
+    $('colorsMes').innerHTML=hm;
   }
   function colorDe(k){return COLORS[k]||[k,'#ccc']}
   function kpi(l,v,n,c){return '<div class="kpi"><div class="l">'+l+'</div><div class="v"'+(c?' style="color:'+c+'"':'')+'>'+v+'</div><div class="n">'+n+'</div></div>'}
@@ -537,6 +542,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     b.onclick=function(){tab=b.dataset.tab;Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(x){x.setAttribute('aria-pressed',String(x===b))});render()};
   });
   $('mes').onchange=function(){mes=$('mes').value;render()};
+  $('colorsMes').addEventListener('click',function(e){var b=e.target.closest('[data-mc]'); if(!b) return; mesColor=b.dataset.mc; render()});
   $('clear').onclick=function(){ if(confirm('¿Borrar todos los pedidos? No se puede deshacer.')){ordersRef.remove()} };
   $('csv').onclick=function(){
     var head=['Fecha pedido','Fecha entrega','Nombre','Teléfono','De dónde es','Entrega / Retira','Cantidad rosas','Color','Seña ($)','Precio final ($)','Falta cobrar ($)','Estado','Observaciones'];
