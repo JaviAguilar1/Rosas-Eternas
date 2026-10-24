@@ -126,13 +126,19 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
 .prices{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;padding:0 20px 20px}
 .prices input{height:40px}
 .note{padding:0 20px 18px;color:var(--muted);font-size:13px}
+.aumento{margin:0 20px 18px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.aumento label{font-weight:700}
+.aum-fila{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.aum-fila input{width:90px;height:40px}
+.lista-calc{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:4px 12px;padding:0 20px 20px;font-size:13px}
+.lista-calc b{display:inline-block;min-width:22px;color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="wrap" id="app" style="display:none">
   <header>
     <div class="brand">
-      <img src="logo-mark.png" alt="Reina Dabi" width="180" height="110">
+      <img src="logo-mark.png" alt="Reina Dabi" width="98" height="64">
       <div>
         <h1>Reina Dabi</h1>
         <div class="sub">Tablero de pedidos de rosas</div>
@@ -246,7 +252,15 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     <details class="card">
       <summary>Lista de precios y costo</summary>
       <div class="prices" id="prices"></div>
-      <div class="note">Cuantas más rosas se piden, más barata sale cada una — para eso el precio de cada tramo (3, 5, 7, 14, 21) debería ser menor por rosa que el anterior. Para cantidades que no están en la lista, el precio es cantidad × "Resto, por rosa".</div>
+      <div class="note">De 1 a 7 rosas se usa el precio del ramo. Desde 8 rosas: cantidad × precio por rosa, redondeado a $1.000, y nunca menos que el ramo de una rosa menos + $1.000.</div>
+      <div class="aumento">
+        <label for="aum-pct">Aumentar todos los precios</label>
+        <div class="aum-fila"><input type="number" id="aum-pct" min="1" max="100" step="1" value="5"><span>%</span><button class="btn" type="button" id="aum-aplicar">Aplicar aumento</button></div>
+        <div class="note" id="aum-ultimo" style="padding:6px 0 0"></div>
+        <div class="note" id="aum-msj" role="status" style="padding:2px 0 0;color:var(--ok)"></div>
+      </div>
+      <div class="note"><b>Así queda la lista</b></div>
+      <div class="lista-calc" id="lista-calc"></div>
     </details>
   </div>
   <nav style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:28px 0 8px">
@@ -257,7 +271,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
 
 <div class="wrap" id="loginGate" style="display:none">
   <form class="card pad login-wrap" id="loginForm" autocomplete="off">
-    <div style="text-align:center;margin-bottom:8px"><img src="logo-mark.png" alt="Reina Dabi" width="150" height="92"></div>
+    <div style="text-align:center;margin-bottom:8px"><img src="logo-completo.png" alt="Reina Dabi" width="180" height="169"></div>
     <h2 style="font-family:var(--serif);font-size:24px;margin:0 0 4px;text-align:center">Reina Dabi</h2>
     <div class="sub" style="margin-bottom:18px;text-align:center">Ingresá para ver el tablero</div>
     <div class="fg" style="margin-top:0"><label for="loginEmail">Email</label><input type="text" id="loginEmail" autocomplete="username"></div>
@@ -286,8 +300,9 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   var db=firebase.database();
   var ordersRef=db.ref('pedidos/orders');
   var configRef=db.ref('pedidos/config');
-  var DEFAULT_PRICES={1:3000,3:8000,5:12000,7:16000,14:28000,21:39000};
-  var DEFAULT_PERROSE=1850, DEFAULT_COSTROSE=800;
+  // Lista vigente (oct 2026): de 1 a 7 rosas precio por ramo; desde 8, precio por rosa según la cantidad
+  var DEFAULT_PRICES={1:5000,2:8000,3:10000,4:12000,5:14000,6:16000,7:18000};
+  var DEFAULT_BANDAS={perRose8:2285,perRose15:2000,perRose21:1800}, DEFAULT_COSTROSE=800, TARIFA=2;
 
   var COLORS={
     rojo:['Rojo','#B3122F'], vino:['Vino','#6E1224'], rosa:['Rosa','#E89BB3'], rosaBebe:['Rosa bebé','#F6D3DE'], fucsia:['Fucsia','#E4357B'],
@@ -298,7 +313,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     combinado:['Combinado','conic-gradient(#8E1E48,#C9962C,#E4357B,#8E1E48)'], otro:['Otro','#FFFFFF']
   };
   var ESTADOS=['Reservado','En preparación','Listo','Entregado'];
-  var TIERS=[1,3,5,7,14,21];
+  var TIERS=[1,2,3,4,5,6,7];
   var DAYS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   var MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
@@ -310,11 +325,17 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   function today(){var d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
   function addDays(n){var d=today();d.setDate(d.getDate()+n);return iso(d)}
 
-  var S={orders:[],prices:{},perRose:DEFAULT_PERROSE,costRose:DEFAULT_COSTROSE};
-  function priceFor(q,prices,perRose){
-    prices=prices||S.prices; perRose=perRose==null?S.perRose:perRose;
-    if(prices[q]!=null && prices[q]!=='') return +prices[q];
-    return Math.round(q*perRose/500)*500;
+  var S={orders:[],prices:{},perRose8:DEFAULT_BANDAS.perRose8,perRose15:DEFAULT_BANDAS.perRose15,perRose21:DEFAULT_BANDAS.perRose21,costRose:DEFAULT_COSTROSE,ultimoAumento:null};
+  // Precio de un ramo: de 1 a 7 rosas, el de la lista; desde 8, cantidad × precio por rosa redondeado a $1.000.
+  // Regla desde 8 rosas: nunca menos que el ramo de una rosa menos + $1.000, redondeado a $1.000 (así no hay saltos para atrás).
+  function porRosa(q){return q<=14?S.perRose8:q<=20?S.perRose15:S.perRose21}
+  function priceFor(q){
+    q=Math.max(1,Math.floor(+q||1)); var p=0;
+    for(var i=1;i<=q;i++){
+      var v=(i<=7&&S.prices[i]!=null&&S.prices[i]!=='')?+S.prices[i]:Math.round(i*porRosa(i)/1000)*1000;
+      p=i<=7?v:Math.max(v,Math.ceil((p+1000)/1000)*1000);
+    }
+    return p;
   }
 
   // Formulario
@@ -398,20 +419,38 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
 
   // Lista de precios
   function buildPrices(){
-    var h='';
-    TIERS.forEach(function(t){h+='<div><label for="p'+t+'">'+t+(t===1?' rosa':' rosas')+'</label><input type="number" id="p'+t+'" data-t="'+t+'" min="0" step="500" value="'+(S.prices[t]==null?'':S.prices[t])+'"></div>'});
-    h+='<div><label for="pr">Resto, por rosa</label><input type="number" id="pr" min="0" step="50" value="'+S.perRose+'"></div>';
-    h+='<div><label for="pc">Costo por rosa</label><input type="number" id="pc" min="0" step="50" value="'+S.costRose+'"></div>';
-    $('prices').innerHTML=h;
-    $('prices').oninput=function(e){
-      var el=e.target;
-      if(el.dataset.t){configRef.child('prices/'+el.dataset.t).set(el.value===''?null:+el.value)}
-      else if(el.id==='pr'){configRef.update({perRose:+el.value||0})}
-      else if(el.id==='pc'){configRef.update({costRose:+el.value||0})}
-      F.precioManual=false;F.reservaManual=false;
-    };
+    var caja=$('prices');
+    if(!caja.contains(document.activeElement)){
+      var h='';
+      TIERS.forEach(function(t){h+='<div><label for="p'+t+'">'+t+(t===1?' rosa':' rosas')+'</label><input type="number" id="p'+t+'" data-t="'+t+'" min="0" step="100" value="'+(S.prices[t]==null?'':S.prices[t])+'"></div>'});
+      [['perRose8','De 8 a 14, por rosa'],['perRose15','De 15 a 20, por rosa'],['perRose21','21 o más, por rosa']].forEach(function(b){h+='<div><label for="'+b[0]+'">'+b[1]+'</label><input type="number" id="'+b[0]+'" data-banda="'+b[0]+'" min="0" step="5" value="'+S[b[0]]+'"></div>'});
+      h+='<div><label for="pc">Costo por rosa</label><input type="number" id="pc" min="0" step="50" value="'+S.costRose+'"></div>';
+      caja.innerHTML=h;
+    }
+    var u=S.ultimoAumento;
+    $('aum-ultimo').textContent=u?'Último aumento: '+u.pct+'% el '+u.fecha.split('-').reverse().join('/'):'Todavía no se aplicó ningún aumento.';
+    var l=''; for(var q=1;q<=30;q++) l+='<span><b>'+q+'</b> '+money(priceFor(q))+'</span>';
+    $('lista-calc').innerHTML=l;
   }
-
+  $('prices').oninput=function(e){
+    var el=e.target;
+    if(el.dataset.t){configRef.child('prices/'+el.dataset.t).set(el.value===''?null:+el.value)}
+    else if(el.dataset.banda){var o={}; o[el.dataset.banda]=+el.value||0; configRef.update(o)}
+    else if(el.id==='pc'){configRef.update({costRose:+el.value||0})}
+    F.precioManual=false;F.reservaManual=false;
+  };
+  $('prices').addEventListener('focusout',function(){setTimeout(function(){if(!$('prices').contains(document.activeElement))buildPrices()},0)});
+  // Aumento general: sube todos los precios el mismo porcentaje (ramos de 1 a 7 redondeados a $100, por rosa a $5)
+  $('aum-aplicar').onclick=function(){
+    var pct=+$('aum-pct').value;
+    if(!(pct>0&&pct<=100)){ $('aum-msj').textContent='Poné un porcentaje entre 1 y 100.'; return; }
+    var k=1+pct/100, nuevos={}, cambios={};
+    TIERS.forEach(function(t){ if(S.prices[t]!=null&&S.prices[t]!=='') nuevos[t]=Math.round(S.prices[t]*k/100)*100; });
+    ['perRose8','perRose15','perRose21'].forEach(function(b){ cambios[b]=Math.round(S[b]*k/5)*5; });
+    if(!confirm('¿Subir todos los precios un '+pct+'%?\n\nEjemplo: 1 rosa pasa de '+money(S.prices[1]||0)+' a '+money(nuevos[1]||0)+' y de 8 a 14 por rosa de '+money(S.perRose8)+' a '+money(cambios.perRose8)+'.\n\nLos pedidos ya cargados no cambian.')) return;
+    cambios.prices=nuevos; cambios.ultimoAumento={pct:pct,fecha:iso(today())};
+    configRef.update(cambios).then(function(){ $('aum-msj').textContent='Listo: precios aumentados un '+pct+'%.'; F.precioManual=false; });
+  };
   // Vista (Pedidos / Balance)
   var view='pedidos';
   function setView(v){
@@ -559,9 +598,16 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   var loaded={config:false,orders:false};
   function tryRender(){ if(loaded.config&&loaded.orders) render(); }
   function onConfigSnap(snap){
-    if(!snap.exists()){ configRef.set({prices:DEFAULT_PRICES,perRose:DEFAULT_PERROSE,costRose:DEFAULT_COSTROSE}); return; }
+    if(!snap.exists()){ configRef.set({prices:DEFAULT_PRICES,perRose8:DEFAULT_BANDAS.perRose8,perRose15:DEFAULT_BANDAS.perRose15,perRose21:DEFAULT_BANDAS.perRose21,costRose:DEFAULT_COSTROSE,tarifa:TARIFA}); return; }
     var c=snap.val();
-    S.prices=c.prices||{}; S.perRose=c.perRose!=null?c.perRose:DEFAULT_PERROSE; S.costRose=c.costRose!=null?c.costRose:DEFAULT_COSTROSE;
+    // Pasa una sola vez a la lista nueva (reemplaza los tramos viejos 1-3-5-7-14-21 y el precio único por rosa)
+    if(c.tarifa!==TARIFA){
+      var nueva={prices:DEFAULT_PRICES,perRose8:DEFAULT_BANDAS.perRose8,perRose15:DEFAULT_BANDAS.perRose15,perRose21:DEFAULT_BANDAS.perRose21,perRose:null,tarifa:TARIFA};
+      configRef.update(nueva).catch(function(err){console.warn('No se pudo guardar la lista nueva',err)});
+      c=Object.assign({},c,nueva);
+    }
+    S.prices=c.prices||{}; S.costRose=c.costRose!=null?c.costRose:DEFAULT_COSTROSE; S.ultimoAumento=c.ultimoAumento||null;
+    ['perRose8','perRose15','perRose21'].forEach(function(b){S[b]=c[b]!=null?+c[b]:DEFAULT_BANDAS[b]});
     loaded.config=true; buildPrices(); refreshForm(); tryRender();
   }
   function onOrdersSnap(snap){
