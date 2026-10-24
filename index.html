@@ -175,6 +175,7 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
 
       <section class="card pad" style="margin-top:20px">
         <h2>Rosas por color</h2>
+        <div class="sub">Para armar: pedidos reservados o en preparación</div>
         <div id="colors"></div>
       </section>
     </main>
@@ -234,6 +235,12 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
       <div class="line"><span>Facturado</span><b id="b-total"></b></div>
       <div class="line"><span>Costo de materiales</span><b id="b-cost"></b></div>
       <div class="line"><span>Ganancia estimada</span><b id="b-profit" style="color:var(--ok)"></b></div>
+    </section>
+
+    <section class="card pad" style="margin-top:20px">
+      <h2>Rosas por color por mes</h2>
+      <div class="sub">Todos los pedidos, según el mes de entrega</div>
+      <div id="colorsMes"></div>
     </section>
 
     <details class="card">
@@ -468,10 +475,19 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     $('pbar').style.width=(total?Math.round(paid/total*100):0)+'%';
     $('b-paid').textContent=money(paid);$('b-owed').textContent=money(owed);$('b-total').textContent=money(total);$('b-cost').textContent=money(cost);$('b-profit').textContent=money(profit);
     // Colores
-    var ct={}; inMes.forEach(function(o){ct[o.color]=(ct[o.color]||0)+o.qty});
+    // Colores: solo lo que falta armar (ni Listo ni Entregado)
+    var ct={}, ctTot=0; inMes.forEach(function(o){if(o.estado==='Listo'||o.estado==='Entregado')return; ct[o.color]=(ct[o.color]||0)+o.qty; ctTot+=o.qty});
     var ck=Object.keys(ct).sort(function(a,b){return ct[b]-ct[a]}), mx=ck.length?ct[ck[0]]:1;
-    $('colors').innerHTML=ck.map(function(k){return '<div class="cbar"><div><span class="dot" style="background:'+COLORS[k][1]+'"></span>'+COLORS[k][0]+'</div><div class="t"><div style="width:'+Math.round(ct[k]/mx*100)+'%"></div></div><b style="text-align:right">'+ct[k]+'</b></div>'}).join('')||'<div class="where" style="margin-top:12px">Todavía no hay rosas cargadas.</div>';
+    $('colors').innerHTML=ck.length?ck.map(function(k){return '<div class="cbar"><div><span class="dot" style="background:'+colorDe(k)[1]+'"></span>'+colorDe(k)[0]+'</div><div class="t"><div style="width:'+Math.round(ct[k]/mx*100)+'%"></div></div><b style="text-align:right">'+ct[k]+'</b></div>'}).join('')+'<div class="line" style="margin-top:12px"><span>Total a armar</span><b>'+ctTot+' rosas</b></div>':'<div class="where" style="margin-top:12px">No hay rosas para armar en este momento.</div>';
+    // Balance: rosas por color de cada mes (todos los pedidos)
+    var pm={}; inMes.forEach(function(o){var m=o.entrega.slice(0,7); pm[m]=pm[m]||{tot:0,c:{}}; pm[m].c[o.color]=(pm[m].c[o.color]||0)+o.qty; pm[m].tot+=o.qty});
+    $('colorsMes').innerHTML=Object.keys(pm).sort().reverse().map(function(m){
+      var p=m.split('-'), c=pm[m].c;
+      return '<div class="line" style="flex-wrap:wrap;gap:6px 14px"><b style="flex:1 0 100%;display:flex;justify-content:space-between"><span style="color:var(--ink)">'+MONTHS[+p[1]-1]+' '+p[0]+'</span><span>'+pm[m].tot+' rosas</span></b>'+
+        Object.keys(c).sort(function(a,b){return c[b]-c[a]}).map(function(k){return '<span style="color:var(--ink)"><span class="dot" style="background:'+colorDe(k)[1]+'"></span>'+colorDe(k)[0]+' '+c[k]+'</span>'}).join('')+'</div>';
+    }).join('')||'<div class="where" style="margin-top:12px">Todavía no hay rosas cargadas.</div>';
   }
+  function colorDe(k){return COLORS[k]||[k,'#ccc']}
   function kpi(l,v,n,c){return '<div class="kpi"><div class="l">'+l+'</div><div class="v"'+(c?' style="color:'+c+'"':'')+'>'+v+'</div><div class="n">'+n+'</div></div>'}
   function fmtDate(s){var d=parse(s);return DAYS[d.getDay()]+' '+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')}
 
