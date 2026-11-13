@@ -112,6 +112,9 @@ textarea.f{width:100%;min-height:64px;border:1px solid #D9C9C2;border-radius:10p
 .swatches{display:flex;flex-wrap:wrap;gap:12px}
 .sw{width:44px;height:44px;border-radius:50%;border:none;padding:0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
 .sw[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--gold)}
+.grp{display:grid;gap:6px;background:#FFF4F7;border:1px solid var(--gold);border-radius:12px;padding:10px 12px;margin:12px 0 4px}
+.grp-t{font-size:15px}.grp-m{font-size:14px}.grp-m s{color:#9a8a90}.grp-d{color:var(--ok);font-weight:700}
+.grp-a{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.grp-a input{width:70px;padding:6px 8px}
 .cesta{margin:12px 0;padding:12px;border:1px dashed var(--gold);border-radius:14px;background:#FFFBF7;display:grid;gap:8px}
 .cesta-add{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;font-weight:600}.cesta-add input{max-width:80px}
 .cesta-it{display:flex;align-items:center;gap:8px;background:#fff;border-radius:10px;padding:8px 10px;font-size:14px}.cesta-it span{flex:1}
@@ -555,6 +558,21 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
   // Tablero
   var tab='activos', mes='todos', editingId=null, mesColor='', mesPrev='todos';
   function debe(o){return Math.max(o.precio-o.pagado,0)}
+  function gKey(o){return o.grupo||((o.nombre||'').trim().toLowerCase()+'|'+o.entrega)}
+  $('rows').addEventListener('click',function(e){
+    var b=e.target.closest('[data-gact]'); if(!b) return;
+    var box=b.closest('.grp'), gk=box.dataset.g, g=S.orders.filter(function(o){return gKey(o)===gk}); if(!g.length) return;
+    if(b.dataset.gact==='sin'){
+      if(!confirm('¿Quitar el descuento de los '+g.length+' ramos de '+g[0].nombre+'?')) return;
+      g.forEach(function(o){ if(o.precioLista) ordersRef.child(o.id).update({precio:o.precioLista,precioLista:null,descuento:null}); });
+      return;
+    }
+    var pc=+box.querySelector('[data-gpc]').value;
+    if(!(pc>0&&pc<90)){ alert('Escribí el porcentaje de descuento (por ejemplo 10).'); return; }
+    var lista=0,nuevo=0; g.forEach(function(o){var b0=o.precioLista||o.precio; lista+=b0; nuevo+=Math.round(b0*(1-pc/100)/100)*100});
+    if(!confirm('Descuento del '+pc+'% para '+g[0].nombre+' ('+g.length+' ramos)\n\nTotal: '+money(lista)+' → '+money(nuevo)+'\nAhorra: '+money(lista-nuevo)+'\n\n¿Aplicarlo?')) return;
+    g.forEach(function(o){var b0=o.precioLista||o.precio; ordersRef.child(o.id).update({precio:Math.round(b0*(1-pc/100)/100)*100,precioLista:b0,descuento:pc});});
+  });
   function render(){
     // meses
     var ms={}; S.orders.forEach(function(o){ms[o.entrega.slice(0,7)]=1});
@@ -566,7 +584,9 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
     var total=0,paid=0,cost=0,roses=0,owedN=0,act=0;
     inMes.forEach(function(o){total+=o.precio;paid+=o.pagado;cost+=o.costo;roses+=o.qty;if(debe(o)>0)owedN++;if(o.estado!=='Entregado')act++});
     var owed=total-paid, profit=total-cost;
-    var sorted=inMes.slice().sort(function(a,b){return a.entrega<b.entrega?-1:a.entrega>b.entrega?1:0});
+    var sorted=inMes.slice().sort(function(a,b){return a.entrega<b.entrega?-1:a.entrega>b.entrega?1:(gKey(a)<gKey(b)?-1:gKey(a)>gKey(b)?1:(a.ramoN||0)-(b.ramoN||0))});
+    // Pedidos de una misma persona: mismo grupo, o mismo nombre y misma fecha de entrega
+    var GR={}; S.orders.forEach(function(o){var k=gKey(o);(GR[k]=GR[k]||[]).push(o)});
     var nxt=sorted.filter(function(o){return o.estado!=='Entregado'})[0];
     $('kpis-pedidos').innerHTML=
       kpi('Pedidos activos',act,nxt?'próxima: '+fmtDate(nxt.entrega):'sin pendientes')+
@@ -578,8 +598,16 @@ summary{padding:16px 20px;cursor:pointer;font-family:var(--serif);font-size:20px
       kpi('Ganancia estimada',money(profit),'margen '+(total?Math.round(profit/total*100):0)+'%','var(--ok)');
     // Tabla
     var shown=sorted.filter(function(o){return tab==='todos'||(tab==='activos'?o.estado!=='Entregado':o.estado==='Entregado')});
-    var rows='';
+    var rows='', vistos={};
     shown.forEach(function(o){
+      var gk=gKey(o), g=GR[gk];
+      if(g&&g.length>1&&!vistos[gk]){ vistos[gk]=1;
+        var tP=0,tR=0,tL=0,dsc=null; g.forEach(function(x){tP+=x.precio;tR+=x.pagado;tL+=(x.precioLista||x.precio);if(x.descuento)dsc=x.descuento});
+        rows+='<div class="grp" data-g="'+esc(gk)+'"><div class="grp-t">👤 <b>'+esc(o.nombre)+'</b> · '+g.length+' ramos · '+fmtDate(o.entrega)+'</div>'+
+          '<div class="grp-m">Total <b>'+money(tP)+'</b>'+(dsc?' <s>'+money(tL)+'</s> <span class="grp-d">−'+dsc+'%</span>':'')+' · Reserva '+money(tR)+' · Debe <b style="color:var(--bad)">'+money(Math.max(tP-tR,0))+'</b></div>'+
+          '<div class="grp-a"><input type="number" min="1" max="90" placeholder="%" aria-label="Porcentaje de descuento" data-gpc>'+
+          '<button type="button" class="pay" data-gact="dto">Aplicar descuento</button>'+(dsc?'<button type="button" class="pay" data-gact="sin">Quitar descuento</button>':'')+'</div></div>';
+      }
       var diff=Math.round((parse(o.entrega)-today())/86400000), cls='b-ok', txt='en '+diff+' días';
       if(o.estado==='Entregado'){cls='b-done';txt='entregado'}
       else{ if(diff<0){txt='atrasado';cls='b-bad'} else if(diff===0){txt='hoy';cls='b-bad'} else if(diff===1){txt='mañana';cls='b-bad'} else if(diff<=2){cls='b-bad'} else if(diff<=7){cls='b-warn'} }
